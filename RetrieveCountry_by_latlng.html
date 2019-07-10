@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <link rel="stylesheet" href="http://cdn.leafletjs.com/leaflet/v0.7.7/leaflet.css">
+  <script src="http://cdn.leafletjs.com/leaflet/v0.7.7/leaflet-src.js"></script>
+  <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js" type="text/javascript"></script>
+  <script src="https://unpkg.com/leaflet-geometryutil@0.9.0/src/leaflet.geometryutil.js"></script>
+  <script src="https://cdn.rawgit.com/hayeswise/Leaflet.PointInPolygon/v1.0.0/wise-leaflet-pip.js"></script>
+  <!-- <script src="https://rawgit.com/hayeswise/Leaflet.PointInPolygon/master/wise-leaflet-pip.js"></script> -->
+  <!-- <script src="Leaflet.CheapLayerAt.js"></script> -->
+  <script src="https://unpkg.com/@mapbox/leaflet-pip@latest/leaflet-pip.js"></script>
+
+
+
+  <!-- <script src="//code.jquery.com/jquery-1.12.0.min.js"></script> -->
+
+  <style>
+    #map {
+      height: 500px;
+      border: 1px solid black;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="map"></div>
+  <div id="latlng">
+    <form>
+      <label for="latitude">Latitude :</label>
+      <input type="text" id="latitude" name="latitude"/>
+      <label for="longitude">Longitude :</label>
+      <input type="text" id="longitude" name="longitude"/>
+      <br/>  
+      <input type="button" value="location" onclick="getLocation()"/>  
+    </form>
+  </div>
+  <div id="sidecol"></div>
+
+  <script src="countries.geo.js"></script>
+
+  <script type="application/javascript">
+    var map = L.map("map").setView([30, 0], 2);
+
+    L.tileLayer('http://{s}.tile.osm.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; <a href="http://osm.org/copyright">OpenStreetMap</a> contributors'
+    }).addTo(map);
+    
+    var latlngMarker;
+    var Layer_coordinates= [];
+    var closestGeojson;
+
+    var myStyle = {
+      fillColor: "grey",
+        weight: 1,
+        opacity: 1,
+        color: 'white',
+        dashArray: '3',
+        fillOpacity: 0.7
+    };
+
+    $('#sidecol').empty();
+    var myGeojSonLayerGroup = L.geoJson(world, {
+      onEachFeature: myOnEachFeature,
+      style: myStyle
+    }).addTo(map);
+
+    $(".cntrys").click(function() {
+      var item = $(this);
+      console.log("clicked on item " + item.data("countryName"));
+      myGeojSonLayerGroup.resetStyle(myGeojSonLayerGroup);
+      item.data("countryLayer").setStyle({
+        fillColor: "red",
+        weight: 2,
+        opacity: 1,
+        color: 'white',
+        dashArray: '3',
+        fillOpacity: 0.7
+      });
+    });
+
+    function myOnEachFeature(feature, layer) {
+      layer.on({
+			mouseover: highlightFeature,
+			mouseout: resetHighlight,
+			click: zoomToFeature});
+      var props = feature.properties;
+      var item = $('<div class="cntrys"><p class="title">' + props.name + '</a></p></div>');
+      item.data("countryLayer", layer);
+      item.data("countryName", props.name);
+      $('#sidecol').append(item);
+    }
+
+    	// get color 
+	function getColor(d) {
+		return '#ffa75e';
+	}
+
+	function style(feature) {
+		return {
+			weight: 2,
+			opacity: 1,
+			color: 'white',
+			dashArray: '3',
+			fillOpacity: 0.7,
+			fillColor: getColor(feature.properties.density)
+		};
+	}
+
+	function highlightFeature(e) {
+		var layer = e.target;
+
+		layer.setStyle({
+      fillColor: "red",
+        weight: 2,
+        opacity: 1,
+        color: 'white',
+        dashArray: '3',
+        fillOpacity: 0.7
+		});
+
+		if (!L.Browser.ie && !L.Browser.opera && !L.Browser.edge) {
+			layer.bringToFront();
+		}
+
+		// info.update(layer.feature.properties);
+	}
+
+	// var geojson;
+
+	function resetHighlight(e) {
+		myGeojSonLayerGroup.resetStyle(e.target);
+		// info.update();
+	}
+
+	function zoomToFeature(e) {
+    map.fitBounds(e.target.getBounds());
+    // alert(e.target.feature.properties.name);
+    getInfo(e.target);
+  }
+  
+  function getInfo(e){
+    alert(e.feature.properties.name);
+  }
+
+          // DELETE marker
+          function deletePoint() {
+            map.removeLayer(latlngMarker);
+            if(map.hasLayer(closestGeojson)){
+              map.removeLayer(closestGeojson);
+            }
+          }
+  
+  function getLocation(){
+    if(map.hasLayer(latlngMarker)){
+      map.removeLayer(latlngMarker);
+    } 
+    if (map.hasLayer(closestGeojson)){
+      map.removeLayer(closestGeojson);
+    } 
+    var latitude=document.getElementById("latitude").value;
+    var longitude = document.getElementById("longitude").value;
+    var contentOfPopup = '<dl><dt>Coordinates :'+[latitude , longitude]+'</dt>' + '<dd><a onClick="deletePoint(\''+ latlngMarker + '\');" href="#">Remove this</a></dd>';
+    latlngMarker = L.marker([latitude, longitude], {zIndexOffset: 1000}).addTo(map).bindPopup(contentOfPopup);
+
+    // reverse long and lat is normal
+   var pip = leafletPip.pointInLayer([longitude, latitude], myGeojSonLayerGroup, true);
+   console.log(pip);
+   if(pip.length==0){
+     alert("marker is not in an area");
+   } else{
+    closestGeojson = L.geoJson(pip[0].feature , { style: {
+      fillColor: "green",
+        weight: 2,
+        opacity: 1,
+        color: 'white',
+        dashArray: '3',
+        fillOpacity: 0.7}}).addTo(map).on({click: pointedLayer});
+    }
+    function pointedLayer (e) {
+    map.fitBounds(e.target.getBounds());
+    alert(pip[0].feature.properties.name);
+  }
+}
+
+
+  </script>
+</body>
+
+</html>
