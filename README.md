@@ -1,4 +1,8 @@
 # Leaflet_Latlng_to_Country
-Highlight geojson on mouse hover and know if a point is inside a polygon
+
+- Let you know if a point is inside a polygon using pip-leaflet
+- GeoJSON features will highlights on mouse hover.
+
+Demo : 
 
 ![](retrieve_country.gif)
